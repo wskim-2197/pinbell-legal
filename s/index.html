@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>핀벨 도착 알림 받기</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#f6f8fb;color:#0f172a;font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.6;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.card{width:100%;max-width:420px;background:#fff;border:1px solid #e5e9f0;border-radius:20px;padding:28px 22px}
+.brand{font-size:14px;font-weight:700;color:#2563eb;margin:0 0 10px}
+h1{font-size:22px;line-height:1.35;margin:0 0 6px;overflow-wrap:anywhere}
+.tasks{margin:14px 0 0;padding:0;list-style:none}
+.tasks li{padding:10px 12px;margin-top:6px;background:#f6f8fb;border-radius:12px;font-size:15px;overflow-wrap:anywhere;white-space:pre-line}
+.sub{font-size:14px;color:#475569;margin:0}
+.btn{display:block;width:100%;margin-top:22px;padding:15px 16px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:16px;font-weight:700;text-align:center;text-decoration:none}
+.link{display:block;text-align:center;margin-top:14px;font-size:14px;color:#2563eb}
+.note{font-size:13px;color:#64748b;margin:18px 0 0}
+.err{color:#d94a4a}
+</style>
+</head>
+<body>
+<main class="card">
+  <p class="brand">핀벨 · 장소에 남기는 알림</p>
+  <h1 id="title">공유받은 도착 알림</h1>
+  <p class="sub" id="sub">핀벨에서 열면 바로 추가돼요.</p>
+  <ul class="tasks" id="tasks"></ul>
+  <a class="btn" id="open" href="#">핀벨에서 열기</a>
+  <a class="link" href="https://play.google.com/store/apps/details?id=co.pinbell">핀벨이 없나요? Play 스토어에서 받기</a>
+  <p class="note" id="note">핀벨을 처음 설치했다면, 설치한 뒤 이 링크를 한 번 더 눌러 주세요.<br>알림 내용은 이 링크 안에만 있고 서버로 보내지 않아요.</p>
+</main>
+<script>
+(function () {
+  var data = (location.hash || "").replace(/^#/, "");
+  var title = document.getElementById("title"), sub = document.getElementById("sub");
+  var list = document.getElementById("tasks"), open = document.getElementById("open");
+  function decode(d) {
+    var b = d.replace(/-/g, "+").replace(/_/g, "/");
+    while (b.length % 4) b += "=";
+    var bin = atob(b), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  }
+  var alert;
+  try { alert = decode(data); } catch (e) { alert = null; }
+  if (!data || !alert || !alert.n) {
+    title.textContent = "링크를 읽지 못했어요";
+    title.className = "err";
+    sub.textContent = "보낸 사람에게 링크를 다시 받아 주세요.";
+    open.style.display = "none";
+    return;
+  }
+  title.textContent = alert.n;
+  sub.textContent = "이 장소에 도착하면 알려 주는 핀벨 알림이에요.";
+  (alert.t || []).forEach(function (t) {
+    var li = document.createElement("li");
+    li.textContent = t[0];
+    list.appendChild(li);
+  });
+  var appLink = "pinbell://add?d=" + data;
+  var android = /Android/i.test(navigator.userAgent);
+  var intentLink = "intent://add?d=" + data + "#Intent;scheme=pinbell;package=co.pinbell;S.browser_fallback_url=" +
+    encodeURIComponent("https://play.google.com/store/apps/details?id=co.pinbell") + ";end";
+  open.href = android ? intentLink : appLink;
+  if (!android) {
+    document.getElementById("note").textContent = "핀벨은 안드로이드 앱이에요. 안드로이드 휴대폰에서 이 링크를 열어 주세요.";
+    return;
+  }
+  // 바로 앱으로. 브라우저가 막으면 위 버튼을 누르면 된다.
+  setTimeout(function () { location.href = intentLink; }, 300);
+})();
+</script>
+</body>
+</html>
